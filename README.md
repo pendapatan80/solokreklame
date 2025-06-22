@@ -885,5 +885,4 @@
       if (confirm('Hapus data ini?')) remove(ref(db, 'reklame/' + key));
     };
   </script>
-</body>
 </html>
