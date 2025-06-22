@@ -1,6 +1,15 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Reklame Firebase</title>
+  <!-- Tambahkan semua link CSS dan ikon dari versi kamu -->
+  <!-- ... (dipotong untuk ringkas) -->
+</head>
+<body>
+  <html lang="id">
+<head>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Data Reklame</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -763,6 +772,118 @@
     }
 
     renderTable();
+  </script>
+</body>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAY9eNWKSvu3Mo0ceVwETkcCog3nbxCSbs",
+      authDomain: "reklamesolok-50dbe.firebaseapp.com",
+      databaseURL: "https://reklamesolok-50dbe-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "reklamesolok-50dbe",
+      storageBucket: "reklamesolok-50dbe.firebasestorage.app",
+      messagingSenderId: "596363336626",
+      appId: "1:596363336626:web:4d3b4d1abc944d3c1822ab",
+      measurementId: "G-Z0GCDXPFPB"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let data = {};
+    let editKey = null;
+
+    onValue(ref(db, 'reklame'), (snapshot) => {
+      data = snapshot.val() || {};
+      renderTable();
+    });
+
+    function renderTable() {
+      const tbody = document.querySelector('#tabelData tbody');
+      tbody.innerHTML = '';
+      const now = new Date();
+      let total = 0, aktif = 0, kadaluarsa = 0;
+      let i = 1;
+      for (const key in data) {
+        const item = data[key];
+        const isExpired = new Date(item.tglAkhir) < now;
+        const status = isExpired ? 'Kadaluwarsa' : 'Aktif';
+        if (isExpired) kadaluarsa++; else aktif++;
+        total++;
+        const tr = document.createElement('tr');
+        if (isExpired) tr.classList.add('expired');
+        tr.innerHTML = `
+          <td>${i++}</td>
+          <td>${item.pemilik}</td>
+          <td>${item.merek}</td>
+          <td>${item.jenis}</td>
+          <td>${item.ukuran}</td>
+          <td>${item.lokasi}</td>
+          <td>Rp ${Number(item.tarif).toLocaleString()}</td>
+          <td>${item.tglMulai}</td>
+          <td>${item.tglAkhir}</td>
+          <td><span class="status-badge ${isExpired ? 'status-kadaluwarsa' : 'status-aktif'}">${status}</span></td>
+          <td>${item.foto ? `<img src="${item.foto}" class="thumb" />` : '-'}</td>
+          <td>
+            <div class="table-actions">
+              <button class="btn-edit" onclick="editData('${key}')"><i class="fas fa-edit"></i> Edit</button>
+              <button class="btn-delete" onclick="hapusData('${key}')"><i class="fas fa-trash"></i> Hapus</button>
+            </div>
+          </td>`;
+        tbody.appendChild(tr);
+      }
+      document.getElementById('totalReklame').textContent = total;
+      document.getElementById('aktifReklame').textContent = aktif;
+      document.getElementById('expiredReklame').textContent = kadaluarsa;
+    }
+
+    document.getElementById('reklameForm').onsubmit = (e) => {
+      e.preventDefault();
+      const input = id => document.getElementById(id).value;
+      const fotoInput = document.getElementById('foto');
+      const reader = new FileReader();
+      const entry = {
+        pemilik: input('pemilik'),
+        merek: input('merek'),
+        jenis: input('jenis'),
+        ukuran: input('ukuran'),
+        lokasi: input('lokasi'),
+        tarif: input('tarif'),
+        tglMulai: input('tglMulai'),
+        tglAkhir: input('tglAkhir'),
+        foto: ''
+      };
+      const simpan = () => {
+        if (editKey) {
+          set(ref(db, 'reklame/' + editKey), entry);
+          editKey = null;
+        } else {
+          const newRef = push(ref(db, 'reklame'));
+          set(newRef, entry);
+        }
+        document.getElementById('reklameForm').reset();
+      };
+      if (fotoInput.files[0]) {
+        reader.onload = () => { entry.foto = reader.result; simpan(); };
+        reader.readAsDataURL(fotoInput.files[0]);
+      } else {
+        if (editKey) entry.foto = data[editKey].foto;
+        simpan();
+      }
+    };
+
+    window.editData = function (key) {
+      const d = data[key];
+      editKey = key;
+      for (let k in d) if (document.getElementById(k)) document.getElementById(k).value = d[k];
+    };
+
+    window.hapusData = function (key) {
+      if (confirm('Hapus data ini?')) remove(ref(db, 'reklame/' + key));
+    };
   </script>
 </body>
 </html>
